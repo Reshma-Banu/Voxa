@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS documents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  source_type TEXT NOT NULL,
+  file_path TEXT,
+  extracted_text TEXT,
+  page_count INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS audio_generations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  document_id INTEGER,
+  title TEXT NOT NULL,
+  source_type TEXT NOT NULL,
+  voice TEXT NOT NULL,
+  audio_path TEXT NOT NULL,
+  duration INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL
+);
