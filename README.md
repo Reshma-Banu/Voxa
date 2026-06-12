@@ -2,7 +2,7 @@
 
 Turn anything you read into something you can listen to.
 
-VOXA is a dark-first SaaS product prototype with a Next.js frontend and FastAPI backend. It supports PDF extraction, text-to-audio generation, history, voices, and a polished audio-library experience.
+VOXA is a SaaS product prototype with a Next.js frontend and FastAPI backend. It supports PDF extraction, text-to-audio generation, history, voices, a polished audio-library experience, and persistent light and dark themes.
 
 ## Stack
 
@@ -35,18 +35,17 @@ pip install -r requirements.txt
 
 ## Run
 
-Start the API:
+From the project root, start the API:
 
 ```bash
-cd apps/api
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+.\apps\api\.venv\Scripts\Activate.ps1
+bun run dev:api
 ```
 
-Start the web app:
+In a second terminal, start the web app:
 
 ```bash
-cd apps/web
-bun run dev
+bun run dev:web
 ```
 
 Open [http://localhost:3000](http://localhost:3000).

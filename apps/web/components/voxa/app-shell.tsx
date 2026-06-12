@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   BookAudio,
   Clock3,
-  FileAudio,
   FileText,
   Home,
   Library,
@@ -18,11 +17,12 @@ import {
   SkipForward,
   SlidersHorizontal,
   Sparkles,
+  Sun,
   Trash2,
   Upload,
   Volume2
 } from "lucide-react";
-import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DragEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { API_URL, api } from "@/lib/api";
@@ -84,20 +84,13 @@ export function VoxaAppShell() {
   const [playing, setPlaying] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [isDark, setIsDark] = useState(true);
   const [stage, setStage] = useState(0);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedText, setUploadedText] = useState("");
   const [text, setText] = useState(
     "Paste an article, chapter, research note, email, memo, or saved thought here. VOXA will turn it into natural audio with a voice that feels easy to stay with."
-  );
-
-  const stats = useMemo(
-    () => [
-      { label: "Documents Processed", value: "1,284", icon: FileText },
-      { label: "Audio Generated", value: "426h", icon: FileAudio },
-      { label: "Listening Hours", value: "18.7k", icon: BookAudio }
-    ],
-    []
   );
 
   useEffect(() => {
@@ -120,6 +113,43 @@ export function VoxaAppShell() {
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("voxa-theme");
+    const nextIsDark = savedTheme
+      ? savedTheme === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setIsDark(nextIsDark);
+    document.documentElement.classList.toggle("dark", nextIsDark);
+    document.documentElement.classList.toggle("light", !nextIsDark);
+  }, []);
+
+  function toggleTheme() {
+    setIsDark((currentTheme) => {
+      const nextIsDark = !currentTheme;
+      document.documentElement.classList.toggle("dark", nextIsDark);
+      document.documentElement.classList.toggle("light", !nextIsDark);
+      window.localStorage.setItem("voxa-theme", nextIsDark ? "dark" : "light");
+      return nextIsDark;
+    });
+  }
+
+  async function deleteItem(id: number) {
+    if (deletingId !== null) return;
+    setDeletingId(id);
+    try {
+      await api.deleteHistory(id);
+      setItems((existing) => existing.filter((item) => item.id !== id));
+      if (current.id === id) {
+        setCurrent(emptyCurrent);
+        setPlaying(false);
+      }
+    } catch {
+      return;
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   function runGeneration(title = uploadedFile?.name.replace(/\.pdf$/i, "") || "Untitled audio") {
     if (processing) return;
@@ -174,12 +204,6 @@ export function VoxaAppShell() {
       <div className="noise" />
       <div className="relative flex min-h-screen">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-white/[0.08] bg-background/70 p-5 backdrop-blur-2xl lg:flex lg:flex-col">
-          <button onClick={() => setView("home")} className="mb-8 text-left">
-            <div>
-              <div className="font-display text-xl font-semibold tracking-tight">VOXA</div>
-              <div className="text-xs text-mutedText">AI reading companion</div>
-            </div>
-          </button>
           <nav className="space-y-1">
             {navItems.map((item) => (
               <button
@@ -202,17 +226,21 @@ export function VoxaAppShell() {
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-success" />
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">Resh</div>
-                  <div className="truncate text-xs text-mutedText">Founder plan</div>
                 </div>
               </div>
             </div>
-            <button className="flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.035] px-3 py-2.5 text-sm text-zinc-300">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-pressed={!isDark}
+              className="flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.035] px-3 py-2.5 text-sm text-zinc-300"
+            >
               <span className="flex items-center gap-2">
-                <Moon className="h-4 w-4" />
-                Dark mode
+                {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                {isDark ? "Dark mode" : "Light mode"}
               </span>
-              <span className="h-5 w-9 rounded-full bg-primary p-0.5">
-                <span className="block h-4 w-4 translate-x-4 rounded-full bg-white" />
+              <span className={cn("h-5 w-9 rounded-full p-0.5 transition", isDark ? "bg-primary" : "bg-zinc-300")}>
+                <span className={cn("block h-4 w-4 rounded-full bg-white transition", isDark && "translate-x-4")} />
               </span>
             </button>
           </div>
@@ -230,7 +258,7 @@ export function VoxaAppShell() {
               className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10"
             >
               {view === "home" && (
-                <HomeView stats={stats} setView={setView} processing={processing} stage={stage} />
+                <HomeView setView={setView} processing={processing} stage={stage} />
               )}
               {view === "upload" && (
                 <UploadView
@@ -258,13 +286,20 @@ export function VoxaAppShell() {
                   runGeneration={() => runGeneration("Pasted listening note")}
                 />
               )}
-              {view === "library" && <LibraryView items={items} setCurrent={setCurrent} setPlaying={setPlaying} />}
+              {view === "library" && (
+                <LibraryView
+                  items={items}
+                  setCurrent={setCurrent}
+                  setPlaying={setPlaying}
+                  deleteItem={deleteItem}
+                  deletingId={deletingId}
+                />
+              )}
               {view === "history" && (
                 <HistoryView
                   items={items}
                   setCurrent={setCurrent}
                   setPlaying={setPlaying}
-                  deleteItem={(id) => setItems((existing) => existing.filter((item) => item.id !== id))}
                 />
               )}
               {view === "settings" && (
@@ -289,10 +324,7 @@ export function VoxaAppShell() {
 function MobileTopbar({ view, setView }: { view: View; setView: (view: View) => void }) {
   return (
     <div className="sticky top-0 z-30 border-b border-white/[0.08] bg-background/75 px-4 py-3 backdrop-blur-xl lg:hidden">
-      <div className="flex items-center justify-between">
-        <button onClick={() => setView("home")} className="font-display font-semibold">
-          <span className="font-display font-semibold">VOXA</span>
-        </button>
+      <div className="flex items-center justify-end">
         <div className="flex gap-1">
           {navItems.slice(0, 4).map((item) => (
             <button
@@ -311,12 +343,10 @@ function MobileTopbar({ view, setView }: { view: View; setView: (view: View) => 
 }
 
 function HomeView({
-  stats,
   setView,
   processing,
   stage
 }: {
-  stats: Array<{ label: string; value: string; icon: typeof FileText }>;
   setView: (view: View) => void;
   processing: boolean;
   stage: number;
@@ -383,24 +413,6 @@ function HomeView({
             </div>
           </div>
         </Card>
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {stats.map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.08 }}
-          >
-            <Card className="p-5 transition duration-300 hover:-translate-y-1 hover:border-accent/35">
-              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.06]">
-                <stat.icon className="h-5 w-5 text-accent" />
-              </div>
-              <div className="text-3xl font-semibold tracking-tight">{stat.value}</div>
-              <div className="mt-1 text-sm text-mutedText">{stat.label}</div>
-            </Card>
-          </motion.div>
-        ))}
       </div>
     </div>
   );
@@ -666,11 +678,15 @@ function ControlPanel({ speed, setSpeed }: { speed: string; setSpeed: (speed: st
 function LibraryView({
   items,
   setCurrent,
-  setPlaying
+  setPlaying,
+  deleteItem,
+  deletingId
 }: {
   items: LibraryItem[];
   setCurrent: (item: LibraryItem) => void;
   setPlaying: (playing: boolean) => void;
+  deleteItem: (id: number) => Promise<void>;
+  deletingId: number | null;
 }) {
   return (
     <div>
@@ -682,13 +698,9 @@ function LibraryView({
       ) : null}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
-          <motion.button
+          <motion.div
             key={item.id}
             whileHover={{ y: -6 }}
-            onClick={() => {
-              setCurrent(item);
-              setPlaying(true);
-            }}
             className="text-left"
           >
             <Card className="h-full overflow-hidden p-4 transition duration-300 hover:border-accent/35">
@@ -699,12 +711,31 @@ function LibraryView({
                   <div className="mt-2 text-sm text-mutedText">{item.source} / {formatDate(item.createdAt)}</div>
                   <div className="mt-1 text-sm text-zinc-400">{formatTime(item.duration)} / {item.voice}</div>
                 </div>
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-black">
+                <button
+                  type="button"
+                  aria-label={`Play ${item.title}`}
+                  onClick={() => {
+                    setCurrent(item);
+                    setPlaying(true);
+                  }}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-black"
+                >
                   <Play className="h-4 w-4 fill-current" />
-                </span>
+                </button>
+              </div>
+              <div className="mt-4 flex justify-end border-t border-white/[0.08] pt-3">
+                <Button
+                  size="sm"
+                  variant="danger"
+                  disabled={deletingId === item.id}
+                  onClick={() => void deleteItem(item.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deletingId === item.id ? "Deleting" : "Delete"}
+                </Button>
               </div>
             </Card>
-          </motion.button>
+          </motion.div>
         ))}
       </div>
     </div>
@@ -715,7 +746,6 @@ function HistoryView(props: {
   items: LibraryItem[];
   setCurrent: (item: LibraryItem) => void;
   setPlaying: (playing: boolean) => void;
-  deleteItem: (id: number) => void;
 }) {
   return (
     <div>
@@ -746,9 +776,6 @@ function HistoryView(props: {
                   Play
                 </Button>
                 <Button size="sm" variant="ghost">Download</Button>
-                <Button size="sm" variant="danger" onClick={() => props.deleteItem(item.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </Card>
