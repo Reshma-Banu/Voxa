@@ -5,9 +5,9 @@
     "apps/web"
   ],
   "scripts": {
-    "dev:web": "bun --cwd apps/web run dev",
-    "build:web": "bun --cwd apps/web run build",
-    "check:web": "bun --cwd apps/web run check",
+    "dev:web": "bun run --cwd apps/web dev",
+    "build:web": "bun run --cwd apps/web build",
+    "check:web": "bun run --cwd apps/web check",
     "dev:api": "cd apps/api && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
   }
 }

@@ -6,6 +6,10 @@
   color-scheme: dark;
 }
 
+html.light {
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -13,6 +17,7 @@
 body {
   min-height: 100vh;
   background: #09090b;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 ::selection {
@@ -36,4 +41,51 @@ body {
 
 .text-balance {
   text-wrap: balance;
+}
+
+html.light body {
+  background: #f7f7fb;
+  color: #18181b;
+}
+
+html.light .bg-voxa-radial {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(124, 58, 237, 0.12), transparent 32%),
+    radial-gradient(circle at 78% 18%, rgba(34, 197, 94, 0.08), transparent 30%),
+    linear-gradient(180deg, #fafafa 0%, #f4f4f7 48%, #fafafa 100%);
+}
+
+html.light .glass {
+  border-color: rgba(24, 24, 27, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 250, 250, 0.88));
+  box-shadow: 0 24px 80px rgba(24, 24, 27, 0.1);
+}
+
+html.light [class*="bg-background"] {
+  background-color: rgba(250, 250, 250, 0.88) !important;
+}
+
+html.light [class*="bg-white/"] {
+  background-color: rgba(24, 24, 27, 0.055) !important;
+}
+
+html.light [class*="border-white/"] {
+  border-color: rgba(24, 24, 27, 0.12) !important;
+}
+
+html.light .text-white,
+html.light .text-zinc-50,
+html.light .text-zinc-100,
+html.light .text-zinc-200,
+html.light .text-zinc-300 {
+  color: #18181b !important;
+}
+
+html.light .text-zinc-400,
+html.light .text-mutedText {
+  color: #52525b !important;
+}
+
+html.light .noise {
+  opacity: 0.08;
 }
